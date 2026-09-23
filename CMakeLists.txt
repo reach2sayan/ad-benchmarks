@@ -66,7 +66,7 @@ endif()
 if(ENABLE_CPPAD)
     FetchContent_Declare(cppad
         GIT_REPOSITORY https://github.com/coin-or/CppAD.git
-        GIT_TAG        master
+        GIT_TAG        main
         GIT_SHALLOW    TRUE
     )
     FetchContent_MakeAvailable(cppad)
