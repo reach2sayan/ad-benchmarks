@@ -1,6 +1,6 @@
 # AD Library Benchmarks
 
-> **Quant-finance benchmarks for C++ automatic differentiation libraries.** Heston MC, SABR calibration, XVA CVA, and LIBOR swaption — finite differences, [XAD](https://github.com/auto-differentiation/xad), [CppAD](https://github.com/coin-or/CppAD), [Adept 2](https://github.com/rjhogan/Adept-2), [autodiff](https://github.com/autodiff/autodiff). Reproducible from source.
+> **Quant-finance benchmarks for C++ automatic differentiation libraries.** Heston MC, SABR calibration, XVA CVA, and LIBOR swaption — finite differences, [XAD](https://github.com/auto-differentiation/xad), [CppAD](https://github.com/coin-or/CppAD), [Adept 2](https://github.com/rjhogan/Adept-2), [autodiff](https://github.com/autodiff/autodiff), [ddx](https://github.com/reach2sayan/ddx). Reproducible from source.
 
 ![Benchmark chart](results/chart.png)
 
@@ -34,8 +34,9 @@ Median of 10 measured iterations after warmup, reverse-mode for the AAD librarie
 | [CppAD](https://github.com/coin-or/CppAD) | Forward & Reverse, higher-order | Tape-based `ADFun` record/replay |
 | [Adept 2](https://github.com/rjhogan/Adept-2) | Forward & Reverse | Expression templates with stack recording |
 | [autodiff](https://github.com/autodiff/autodiff) | Forward (`dual`) & Reverse (`var`) | Compile-time dual numbers / runtime expression tree |
+| [ddx](https://github.com/reach2sayan/ddx) | Forward & Reverse, higher-order | Record-once graph; interpreted, or compiled by its LLVM backend (AVX2, 4 lanes) |
 
-All four libraries support both forward and reverse modes; the suite exercises reverse mode, the standard choice for many-inputs/one-output workloads such as risk and pricing.
+All five libraries support both forward and reverse modes; the suite exercises reverse mode, the standard choice for many-inputs/one-output workloads such as risk and pricing.
 
 ## Build & run
 
@@ -54,6 +55,22 @@ cmake -B build -GNinja -DCMAKE_BUILD_TYPE=Release \
   -DENABLE_XAD_JIT=ON
 ```
 
+To enable the ddx rows (`ddx` and `ddx-JIT`), build ddx with the suite's flags, then configure against that build:
+
+```bash
+cd /path/to/ddx
+cmake -S . -B build/adbench -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DENABLE_NATIVE_ARCH=OFF -DDDX_BUILD_JIT=ON -DDDX_OPENCL=OFF \
+  -DCMAKE_CXX_FLAGS="-mavx2 -mfma"
+cmake --build build/adbench
+
+cd /path/to/ad-benchmarks
+cmake -B build -GNinja -DCMAKE_BUILD_TYPE=Release \
+  -DENABLE_DDX=ON -DDDX_DIR=/path/to/ddx/build/adbench
+```
+
+`./build/ad_benchmarks_ddx_validate` checks both ddx backends' gradients against central differences and their values against the double kernels, outside the timed binary.
+
 Run `./build/ad_benchmarks --help` for CLI options (`--paths`, `--iters`, `--warmup`, `--csv`, `--only`, `--skip`).
 
 To regenerate the chart from a CSV:
@@ -65,9 +82,9 @@ python scripts/plot_results.py results/results.csv results/chart.png
 ## Methodology
 
 - **Identical compiler flags** across libraries: `-O3 -mavx2 -mfma` (GCC/Clang) or `/O2 /arch:AVX2 /fp:fast` (MSVC).
-- **Idiomatic APIs.** Each library uses its own recommended pattern: XAD reverse-mode tape (`xad::adj<double>`), CppAD `ADFun` record/replay, Adept `Stack` recording, autodiff `dual` forward mode for SABR. No micro-optimizations applied to one library that wouldn't be applied to another.
+- **Idiomatic APIs.** Each library uses its own recommended pattern: XAD reverse-mode tape (`xad::adj<double>`), CppAD `ADFun` record/replay, Adept `Stack` recording, autodiff `dual` forward mode for SABR, ddx `rt::Builder` graph recorded once and replayed by its block interpreter (`ddx`) or compiled once with its LLVM backend at 4 lanes with only the replay timed (`ddx-JIT`). No micro-optimizations applied to one library that wouldn't be applied to another.
 - **Median of measured iterations** after warmup; warmup excluded.
-- **All four libraries' gradients** agree with finite differences within numerical tolerance during development.
+- **All five libraries' gradients** agree with finite differences within numerical tolerance during development.
 - **Same machine, same run.** Re-running on a different machine scales all rows by roughly the same factor.
 
 ## Contributing

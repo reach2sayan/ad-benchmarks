@@ -11,9 +11,9 @@ Defaults:
 Bar chart of gradient time per library, on a linear x-axis. A dashed
 vertical reference line marks the "primal" baseline — the cost of one
 evaluation of the same kernel with raw doubles, no AD machinery
-attached. Bars to the left of the line are *below* primal cost (only
-XAD-Codegen achieves this on the 8-input Heston benchmark, because
-the JIT-compiled AVX2 graph is faster than the host C++ primal path).
+attached. Bars to the left of the line are *below* primal cost. That
+happens when a graph recorded once folds away work that depends only on
+constants, which the raw-double primal redoes on every path.
 """
 
 import csv
@@ -37,14 +37,18 @@ LIBRARY_COLORS = {
     "Adept":       "#616161",
     "XAD":         XAD_GOLD,
     "XAD-Codegen": XAD_GOLD_DARK,
+    "ddx":         "#4A90D9",
+    "ddx-JIT":     "#1F5FA8",
 }
 
-LIBRARY_ORDER = ["FD", "autodiff", "CppAD", "Adept", "XAD", "XAD-Codegen"]
+LIBRARY_ORDER = ["FD", "autodiff", "CppAD", "Adept", "XAD", "XAD-Codegen",
+                 "ddx", "ddx-JIT"]
 
 # Libraries used to compute the canonical "primal" baseline. FD is excluded
 # because its primal benchmark uses pre-generated random samples (whereas the
 # AAD libs include RNG cost), so it understates the true single-eval cost.
-PRIMAL_BASELINE_LIBS = ["XAD", "CppAD", "Adept", "XAD-Codegen"]
+PRIMAL_BASELINE_LIBS = ["XAD", "CppAD", "Adept", "XAD-Codegen",
+                        "ddx", "ddx-JIT"]
 
 BENCH_LABELS = {
     "HestonMC":      "Heston MC\n8 sensitivities, 10K paths",

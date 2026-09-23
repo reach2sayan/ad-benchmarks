@@ -9,7 +9,7 @@ repository-code: "https://github.com/auto-differentiation/ad-benchmarks"
 url: "https://github.com/auto-differentiation/ad-benchmarks"
 abstract: >-
   Reproducible C++ benchmark suite comparing automatic differentiation
-  libraries (XAD, CppAD, Adept 2, autodiff) against finite-difference
+  libraries (XAD, CppAD, Adept 2, autodiff, ddx) against finite-difference
   baselines on four quantitative-finance workloads: Heston stochastic
   volatility Monte Carlo, SABR vol-surface calibration, XVA CVA on a
   swap portfolio, and a LIBOR market model swaption portfolio.

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 project(ad-benchmarks
     LANGUAGES CXX
-    DESCRIPTION "Comparative benchmark suite for C++ automatic differentiation libraries (XAD, CppAD, Adept 2, autodiff) on quantitative-finance workloads."
+    DESCRIPTION "Comparative benchmark suite for C++ automatic differentiation libraries (XAD, CppAD, Adept 2, autodiff, ddx) on quantitative-finance workloads."
     HOMEPAGE_URL "https://github.com/auto-differentiation/ad-benchmarks"
 )
 
@@ -18,12 +18,16 @@ option(ENABLE_CPPAD    "Build CppAD benchmarks"     ON)
 option(ENABLE_ADEPT    "Build Adept 2 benchmarks"   ON)
 option(ENABLE_AUTODIFF "Build autodiff benchmarks"  ON)
 option(ENABLE_XAD_JIT  "Build XAD JIT benchmarks"   OFF)  # requires xad-codegen
+option(ENABLE_DDX      "Build ddx benchmarks"       OFF)  # requires a local ddx build
 
 set(MC_PATHS 10000 CACHE STRING "Default MC path count for LIBOR swaption benchmark")
 
 # Path to local XAD if not system-installed
 set(XAD_DIR "" CACHE PATH "Path to XAD source (if not using FetchContent)")
 set(XAD_CODEGEN_DIR "" CACHE PATH "Path to xad-codegen source (for JIT benchmarks)")
+
+# Path to a ddx build or install tree (consumed via find_package)
+set(DDX_DIR "" CACHE PATH "Path to a configured ddx build or install")
 
 # ===========================================================================
 # Compiler flags for fair comparison
@@ -108,6 +112,16 @@ if(ENABLE_AUTODIFF)
     FetchContent_MakeAvailable(autodiff)
 endif()
 
+# --- ddx ---
+if(ENABLE_DDX)
+    if(DDX_DIR)
+        find_package(ddx REQUIRED COMPONENTS rt jit PATHS "${DDX_DIR}" NO_DEFAULT_PATH)
+    else()
+        find_package(ddx REQUIRED COMPONENTS rt jit)
+    endif()
+    message(STATUS "ddx ${ddx_VERSION} from ${ddx_DIR}")
+endif()
+
 # ===========================================================================
 # Benchmark executable
 # ===========================================================================
@@ -160,6 +174,30 @@ endif()
 
 add_executable(ad_benchmarks ${BENCH_SOURCES})
 target_include_directories(ad_benchmarks PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# ddx requires C++23; only its wrappers are built at that standard, the rest
+# of the suite stays at C++17. Global compile options apply unchanged.
+if(ENABLE_DDX)
+    add_library(ad_benchmarks_ddx OBJECT
+        ddx/heston_ddx.cpp
+        ddx/sabr_calibration_ddx.cpp
+        ddx/xva_ddx.cpp
+        ddx/libor_swaption_ddx.cpp
+    )
+    target_compile_features(ad_benchmarks_ddx PRIVATE cxx_std_23)
+    target_include_directories(ad_benchmarks_ddx PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(ad_benchmarks_ddx PRIVATE ddx::rt ddx::jit)
+    target_compile_definitions(ad_benchmarks_ddx PRIVATE ENABLE_DDX)
+    target_link_libraries(ad_benchmarks PRIVATE ad_benchmarks_ddx ddx::rt ddx::jit)
+    target_compile_definitions(ad_benchmarks PRIVATE ENABLE_DDX)
+
+    # Gradient/value check for both ddx rows; kept out of ad_benchmarks so it
+    # never sits on the timed path.
+    add_executable(ad_benchmarks_ddx_validate ddx/validate.cpp)
+    target_compile_features(ad_benchmarks_ddx_validate PRIVATE cxx_std_23)
+    target_include_directories(ad_benchmarks_ddx_validate PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(ad_benchmarks_ddx_validate PRIVATE ad_benchmarks_ddx ddx::rt ddx::jit)
+endif()
 
 # Compile definitions for enabled libraries
 if(ENABLE_XAD)

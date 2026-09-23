@@ -55,3 +55,17 @@ BenchmarkResult autodiff_sabr_calibration(size_t warmup, size_t iters);
 BenchmarkResult autodiff_xva(size_t warmup, size_t iters);
 BenchmarkResult autodiff_libor_swaption(int numPaths, size_t warmup, size_t iters);
 #endif
+
+// --- ddx ---
+#ifdef ENABLE_DDX
+BenchmarkResult ddx_heston(int numPaths, size_t warmup, size_t iters);
+BenchmarkResult ddx_sabr_calibration(size_t warmup, size_t iters);
+BenchmarkResult ddx_xva(size_t warmup, size_t iters);
+BenchmarkResult ddx_libor_swaption(int numPaths, size_t warmup, size_t iters);
+
+BenchmarkResult ddx_jit_heston(int numPaths, size_t warmup, size_t iters);
+BenchmarkResult ddx_jit_sabr_calibration(size_t warmup, size_t iters);
+BenchmarkResult ddx_jit_xva(size_t warmup, size_t iters);
+BenchmarkResult ddx_jit_libor_swaption(int numPaths, size_t warmup, size_t iters);
+
+#endif

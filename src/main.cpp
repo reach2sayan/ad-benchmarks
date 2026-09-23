@@ -1,7 +1,7 @@
 /*******************************************************************************
    AD Library Benchmark Suite
 
-   Compares XAD against CppAD, Adept 2, and autodiff across four
+   Compares XAD against CppAD, Adept 2, autodiff, and ddx across four
    quantitative-finance benchmarks:
      - Heston stochastic-vol Monte Carlo
      - SABR vol-surface calibration
@@ -82,7 +82,7 @@ int main(int argc, char** argv)
 
     auto run = [&](auto fn, const char* label)
     {
-        std::cout << "  " << std::setw(12) << std::left << label << std::flush;
+        std::cout << "  " << std::setw(14) << std::left << label << std::flush;
         results.push_back(fn());
         auto& r = results.back();
         if (r.gradient_ms < 0)
@@ -115,6 +115,10 @@ int main(int argc, char** argv)
 #ifdef ENABLE_AUTODIFF
         run([&]() { return autodiff_heston(mc_paths, warmup, iters); }, "autodiff");
 #endif
+#ifdef ENABLE_DDX
+        run([&]() { return ddx_heston(mc_paths, warmup, iters); }, "ddx");
+        run([&]() { return ddx_jit_heston(mc_paths, warmup, iters); }, "ddx-JIT");
+#endif
     }
 
     // --- 2. SABR Surface Calibration (adjoint+JIT, 15 inputs, 500 iterations) ---
@@ -136,6 +140,10 @@ int main(int argc, char** argv)
 #endif
 #ifdef ENABLE_AUTODIFF
         run([&]() { return autodiff_sabr_calibration(warmup, iters); }, "autodiff");
+#endif
+#ifdef ENABLE_DDX
+        run([&]() { return ddx_sabr_calibration(warmup, iters); }, "ddx");
+        run([&]() { return ddx_jit_sabr_calibration(warmup, iters); }, "ddx-JIT");
 #endif
     }
 
@@ -162,6 +170,10 @@ int main(int argc, char** argv)
 #ifdef ENABLE_AUTODIFF
         run([&]() { return autodiff_xva(warmup, iters); }, "autodiff");
 #endif
+#ifdef ENABLE_DDX
+        run([&]() { return ddx_xva(warmup, iters); }, "ddx");
+        run([&]() { return ddx_jit_xva(warmup, iters); }, "ddx-JIT");
+#endif
     }
 
     // --- 4. LIBOR Swaption MC (161 inputs, JIT AVX2) ---
@@ -184,6 +196,10 @@ int main(int argc, char** argv)
 #endif
 #ifdef ENABLE_AUTODIFF
         run([&]() { return autodiff_libor_swaption(mc_paths, warmup, iters); }, "autodiff");
+#endif
+#ifdef ENABLE_DDX
+        run([&]() { return ddx_libor_swaption(mc_paths, warmup, iters); }, "ddx");
+        run([&]() { return ddx_jit_libor_swaption(mc_paths, warmup, iters); }, "ddx-JIT");
 #endif
     }
 
